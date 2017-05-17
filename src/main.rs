@@ -7,31 +7,38 @@ use std::io::{Error,Write};
 use std::sync::mpsc::Receiver;
 
 fn main() {
-  log("kunoichi application started.");
+  log("application starting.");
   let daemon = Daemon {
     name: "kunoichi".to_string()
   };
   daemon.run(move |rx: Receiver<State>| {
-    log("kunoichi service started.");
     for signal in rx.iter() {
       match signal {
         State::Start => {
-          log("kunoichi service: Start");
-          // do stuff
+          service_start();
         },
         State::Reload => {
-          log("kunoichi service: Reload");
-          // do stuff
+          service_stop();
+          service_start();
         },
         State::Stop => {
-          log("kunoichi service: Stop");
-          // do stuff
+          service_stop();
         }
       };
     }
-    log("kunoichi service finished.");
   }).unwrap();
-  log("kunoichi application finished.");
+  log("application terminating.");
+}
+
+fn service_start() {
+  log("service starting...");
+  // todo: start kunoich if not running
+  log("service started.");
+}
+fn service_stop() {
+  log("service stopping...");
+  // todo: stop kunoich if running
+  log("service stopped.");
 }
 
 #[allow(unused_must_use)]
