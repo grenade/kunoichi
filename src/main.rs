@@ -7,7 +7,7 @@ use std::io::{Error,Write};
 use std::sync::mpsc::Receiver;
 
 fn main() {
-  log("application starting.");
+  log("application initialising...");
   let daemon = Daemon {
     name: "kunoichi".to_string()
   };
@@ -28,7 +28,7 @@ fn main() {
       };
     }
   }).unwrap();
-  log("application terminating.");
+  log("application terminating...");
 }
 
 fn service_start(running: &mut bool) {
