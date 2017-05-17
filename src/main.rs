@@ -2,57 +2,125 @@ extern crate daemon;
 
 use daemon::{State,Daemon,DaemonRunner};
 use std::env;
+use std::fmt::{self};
 use std::fs::OpenOptions;
 use std::io::{Error,Write};
 use std::sync::mpsc::Receiver;
+use std::thread;
+
+static SERVICE_NAME: &'static str = "kunoichi";
 
 fn main() {
-  log("application initialising...");
+  log(&*format!("application {:?} initialising.", SERVICE_NAME));
   let daemon = Daemon {
-    name: "kunoichi".to_string()
+    name: SERVICE_NAME.to_string()
   };
-  let mut running = false;
+  let mut service_state = ServiceState::Stopped;
   daemon.run(move |rx: Receiver<State>| {
     for signal in rx.iter() {
       match signal {
         State::Start => {
-          service_start(&mut running);
+          match service_state {
+            ServiceState::Stopped | ServiceState::StartFailed => {
+              service_state = ServiceState::Starting;
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+              service_state = match start_service() {
+                Ok(_) => ServiceState::Started,
+                Err(_) => ServiceState::StartFailed,
+              };
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+            },
+            ServiceState::Started => {
+              log(&*format!("service {:?} is already in the {:?} state.", SERVICE_NAME, service_state));
+            },
+            _ => {
+              log(&*format!("service {:?} is in the {:?} state, so cannot be started.", SERVICE_NAME, service_state));
+            },
+          }
         },
         State::Reload => {
-          service_stop(&mut running);
-          service_start(&mut running);
+          match service_state {
+            ServiceState::Started | ServiceState::StopFailed => {
+              service_state = ServiceState::Stopping;
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+              service_state = match stop_service() {
+                Ok(_) => ServiceState::Stopped,
+                Err(_) => ServiceState::StopFailed,
+              };
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+            },
+            ServiceState::Stopped => {
+              log(&*format!("service {:?} is already in the {:?} state.", SERVICE_NAME, service_state));
+            },
+            _ => {
+              log(&*format!("service {:?} is in the {:?} state, so cannot be stopped.", SERVICE_NAME, service_state));
+            },
+          }
+          match service_state {
+            ServiceState::Stopped | ServiceState::StartFailed => {
+              service_state = ServiceState::Starting;
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+              service_state = match start_service() {
+                Ok(_) => ServiceState::Started,
+                Err(_) => ServiceState::StartFailed,
+              };
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+            },
+            ServiceState::Started => {
+              log(&*format!("service {:?} is already in the {:?} state.", SERVICE_NAME, service_state));
+            },
+            _ => {
+              log(&*format!("service {:?} is in the {:?} state, so cannot be started.", SERVICE_NAME, service_state));
+            },
+          }
         },
         State::Stop => {
-          service_stop(&mut running);
+          match service_state {
+            ServiceState::Started | ServiceState::StopFailed => {
+              service_state = ServiceState::Stopping;
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+              service_state = match stop_service() {
+                Ok(_) => ServiceState::Stopped,
+                Err(_) => ServiceState::StopFailed,
+              };
+              log(&*format!("service {:?} {:?}", SERVICE_NAME, service_state));
+            },
+            ServiceState::Stopped => {
+              log(&*format!("service {:?} is already in the {:?} state.", SERVICE_NAME, service_state));
+            },
+            _ => {
+              log(&*format!("service {:?} is in the {:?} state, so cannot be stopped.", SERVICE_NAME, service_state));
+            },
+          }
         }
       };
     }
   }).unwrap();
-  log("application terminating...");
+  log(&*format!("application {:?} terminating.", SERVICE_NAME));
 }
 
-fn service_start(running: &mut bool) {
-  match running {
-    &mut true => log("service is already started."),
-    &mut false => {
-      log("service starting...");
-      *running = true;
-      // todo: start service and make a mess
-      log("service started.");
-    },
+#[derive(Clone,Copy,Debug)]
+enum ServiceState {
+  Started,
+  Starting,
+  StartFailed,
+  Stopped,
+  Stopping,
+  StopFailed,
+}
+impl fmt::Display for ServiceState {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{:?}", self)
   }
 }
 
-fn service_stop(running: &mut bool) {
-  match running {
-    &mut true => {
-      log("service stopping...");
-      *running = false;
-      // todo: stop service and clean up
-      log("service stopped.");
-    },
-    &mut false => log("service is already stopped."),
-  }
+#[allow(unused_must_use)]
+fn start_service() -> Result<(), Error> {
+  unimplemented!();
+}
+
+fn stop_service() -> Result<(), Error> {
+  unimplemented!();
 }
 
 #[allow(unused_must_use)]
